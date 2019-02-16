@@ -21,30 +21,31 @@ Page({
     size: ['常规', '珍珠', '西米露'],
     cartList: [],
     sumMonney: 0,
-    cupNumber:0,
+    cupNumber: 0,
     showCart: false,
-    loading: false
+    loading: false,
+    tmpCount: -1
   },
 
   /**
    * 生命周期函数--监听页面加载
    */
-  onLoad: function (options) {
+  onLoad: function(options) {
     var that = this;
     var sysinfo = wx.getSystemInfoSync().windowHeight;
     console.log(sysinfo)
     wx.showLoading({
       title: '努力加载中',
     })
-    //将本来的后台换成了easy-mock 的接口，所有数据一次请求完 略大。。
     wx.request({
-      url: 'https://easy-mock.com/mock/59abab95e0dc66334199cc5f/coco/aa',
+      //url: 'https://easy-mock.com/mock/59abab95e0dc66334199cc5f/coco/aa',
+      url: 'http://localhost:7002/product/list',
       method: 'GET',
       data: {},
       header: {
         'Accept': 'application/json'
       },
-      success: function (res) {
+      success: function(res) {
         wx.hideLoading();
         console.log(res)
         that.setData({
@@ -54,18 +55,14 @@ Page({
       }
     })
   },
-  selectMenu: function (e) {
+  selectMenu: function(e) {
     var index = e.currentTarget.dataset.index
-    console.log(index)
     this.setData({
       activeIndex: index,
       toView: 'a' + index,
-      // scrollTop: 1186
     })
-    console.log(this.data.toView);
   },
-  scroll: function (e) {
-    console.log(e)
+  scroll: function(e) {
     var dis = e.detail.scrollTop
     if (dis > 0 && dis < 1189) {
       this.setData({
@@ -116,20 +113,28 @@ Page({
   /**
    * 生命周期函数--监听页面初次渲染完成
    */
-  selectInfo: function (e) {
+  selectInfo: function(e) {
     var type = e.currentTarget.dataset.type;
     var index = e.currentTarget.dataset.index;
+    if (type == undefined) {
+      type = 0;
+    }
+    if (index == undefined) {
+      index = 0;
+    }
+
     this.setData({
       showModalStatus: !this.data.showModalStatus,
       currentType: type,
       currentIndex: index,
       sizeIndex: 0,
       sugarIndex: 0,
-      temIndex: 0
+      temIndex: 0,
+      tmpCount: -1
     });
   },
 
-  chooseSE: function (e) {
+  chooseSE: function(e) {
     var index = e.currentTarget.dataset.index;
     var type = e.currentTarget.dataset.type;
     if (type == 0) {
@@ -149,16 +154,24 @@ Page({
     }
   },
 
-  addToCart: function () {
+  addToCart: function() {
+    if (this.data.tmpCount < 0) {
+      wx.showToast({
+        title: '数量不正确',
+        icon: 'none',
+        duration: 2000
+      });
+      return false;
+    }
     var a = this.data
     var addItem = {
-      "name": a.listData[a.currentType].foods[a.currentIndex].name,
-      "price": a.listData[a.currentType].foods[a.currentIndex].specfoods[0].price,
-      "detail": a.size[a.sizeIndex] + "+" + a.sugar[a.sugarIndex] + "+" + a.tem[a.temIndex],
-      "number": 1,
-      "sum": a.listData[a.currentType].foods[a.currentIndex].specfoods[0].price,
+      "name": a.listData[a.currentType].productList[a.currentIndex].name,
+      "price": a.listData[a.currentType].productList[a.currentIndex].price,
+      "number": a.tmpCount,
+      "sum": a.listData[a.currentType].productList[a.currentIndex].price,
+      "id": a.listData[a.currentType].productList[a.currentIndex].id
     }
-    var sumMonney = a.sumMonney + a.listData[a.currentType].foods[a.currentIndex].specfoods[0].price;
+    var sumMonney = a.sumMonney + a.listData[a.currentType].productList[a.currentIndex].price;
     var cartList = this.data.cartList;
     cartList.push(addItem);
     this.setData({
@@ -169,7 +182,7 @@ Page({
     });
     console.log(this.data.cartList)
   },
-  showCartList: function () {
+  showCartList: function() {
     console.log(this.data.showCart)
     if (this.data.cartList.length != 0) {
       this.setData({
@@ -178,14 +191,19 @@ Page({
     }
 
   },
-  clearCartList: function () {
+  clearCartList: function() {
     this.setData({
       cartList: [],
       showCart: false,
       sumMonney: 0
     });
   },
-  addNumber: function (e) {
+  countInput: function(e) {
+    this.setData({
+      tmpCount: parseInt(e.detail.value)
+    });
+  },
+  addNumber: function(e) {
     var index = e.currentTarget.dataset.index;
     console.log(index)
     var cartList = this.data.cartList;
@@ -196,26 +214,26 @@ Page({
     this.setData({
       cartList: cartList,
       sumMonney: sum,
-      cupNumber: this.data.cupNumber+1
+      cupNumber: this.data.cupNumber + 1
     });
   },
-  decNumber: function (e) {
+  decNumber: function(e) {
     var index = e.currentTarget.dataset.index;
     console.log(index)
     var cartList = this.data.cartList;
 
-    var sum = this.data.sumMonney - cartList[index].price;
+    var sum = this.data.sumMonney;
     cartList[index].sum -= cartList[index].price;
     cartList[index].number == 1 ? cartList.splice(index, 1) : cartList[index].number--;
     this.setData({
       cartList: cartList,
       sumMonney: sum,
       showCart: cartList.length == 0 ? false : true,
-      cupNumber: this.data.cupNumber-1
+      cupNumber: this.data.cupNumber - 1
     });
   },
-  goBalance: function () {
-    if (this.data.sumMonney != 0) {
+  goBalance: function() {
+    if (this.data.sumMonney >= 0) {
       wx.setStorageSync('cartList', this.data.cartList);
       wx.setStorageSync('sumMonney', this.data.sumMonney);
       wx.setStorageSync('cupNumber', this.data.cupNumber);
@@ -225,49 +243,49 @@ Page({
     }
   },
 
-  onReady: function () {
+  onReady: function() {
 
   },
 
   /**
    * 生命周期函数--监听页面显示
    */
-  onShow: function () {
+  onShow: function() {
 
   },
 
   /**
    * 生命周期函数--监听页面隐藏
    */
-  onHide: function () {
+  onHide: function() {
 
   },
 
   /**
    * 生命周期函数--监听页面卸载
    */
-  onUnload: function () {
+  onUnload: function() {
 
   },
 
   /**
    * 页面相关事件处理函数--监听用户下拉动作
    */
-  onPullDownRefresh: function () {
+  onPullDownRefresh: function() {
 
   },
 
   /**
    * 页面上拉触底事件的处理函数
    */
-  onReachBottom: function () {
+  onReachBottom: function() {
 
   },
 
   /**
    * 用户点击右上角分享
    */
-  onShareAppMessage: function () {
+  onShareAppMessage: function() {
 
   }
 })

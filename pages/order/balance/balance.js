@@ -21,12 +21,14 @@ Page({
     this.setData({
       cartList: wx.getStorageSync('cartList'),
       sumMonney: wx.getStorageSync('sumMonney'),
-      cutMonney: wx.getStorageSync('sumMonney')>19?3:0,
       cupNumber: wx.getStorageSync('cupNumber'),
     })
     
   },
   gopay:function(){
+    console.log(JSON.stringify(this.data.cartList));
+
+    return false;
     wx.navigateTo({
       url: '../detail/detail'
     })
